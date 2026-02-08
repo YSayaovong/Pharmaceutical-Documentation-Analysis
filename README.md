@@ -1,5 +1,8 @@
 # Pharmaceutical Documentation Analysis & AI Readiness
 
+## GitHub short description
+Pharmaceutical vendor-document workflow + compliance risk analysis + AI automation opportunities (OCR/NLP/RAG), with vendor documents and generated visuals.
+
 ![Workflow](visuals/pharma_workflow.png)
 
 ## What this is

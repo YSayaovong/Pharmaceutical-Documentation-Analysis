@@ -1,87 +1,254 @@
 """
-generate_visuals.py
-Regenerates the diagrams in /visuals for the pharma-doc-analysis repo.
+scripts/generate_visuals.py
 
-Run:
+Generates professional, high-contrast visuals for the pharma-doc-analysis project.
+
+Outputs (in ../visuals):
+- pharma_workflow.png
+- document_flowchart.png
+- compliance_risk_map.png
+
+Run (from project root):
   python -m pip install numpy matplotlib
   python scripts/generate_visuals.py
 """
+
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
 
-def ensure_dirs(project_root: Path) -> Path:
-    visuals = project_root / "visuals"
-    visuals.mkdir(exist_ok=True)
-    return visuals
+# ---------------- Theme ----------------
+NAVY = "#0B1F3B"
+BG = "#F6F8FB"
+BOX = "#FFFFFF"
 
+
+# ---------------- Helpers ----------------
+def _canvas(figsize):
+    fig, ax = plt.subplots(figsize=figsize)
+    fig.patch.set_facecolor(BG)
+    ax.set_facecolor(BG)
+    ax.axis("off")
+    return fig, ax
+
+
+def _save(fig, out: Path):
+    out.parent.mkdir(exist_ok=True)
+    fig.savefig(out, dpi=320, bbox_inches="tight", facecolor=BG)
+    plt.close(fig)
+
+
+# --------------------------------------------------------------------
+# 1) Pharmaceutical Vendor Documentation Workflow (HORIZONTAL)
+#    - boxes spaced out
+#    - arrows fit cleanly within the empty gaps (no overlap, no reversal)
+# --------------------------------------------------------------------
 def pharma_workflow(visuals: Path) -> None:
     out = visuals / "pharma_workflow.png"
-    fig, ax = plt.subplots(figsize=(12, 4))
-    ax.axis("off")
-    steps = ["Vendor", "Document\nSubmission", "QA/QC\nReview", "Compliance\nValidation", "Approval &\nRelease"]
-    xs = np.linspace(0.6, 10.6, len(steps))
-    for i, (x, label) in enumerate(zip(xs, steps)):
-        p = FancyBboxPatch((x, 1.3), 1.7, 1.2, boxstyle="round,pad=0.2,rounding_size=0.12",
-                           linewidth=1.2, edgecolor="black", facecolor="#e9f5ff")
-        ax.add_patch(p)
-        ax.text(x+0.85, 1.9, label, ha="center", va="center", fontsize=11, fontweight="bold")
-        if i < len(steps)-1:
-            ax.add_patch(FancyArrowPatch((x+1.9, 1.9), (xs[i+1]-0.1, 1.9),
-                                         arrowstyle="-|>", mutation_scale=18, linewidth=1.2))
-    ax.text(6, 3.2, "Pharmaceutical Vendor Documentation Workflow", ha="center", fontsize=14, fontweight="bold")
-    plt.savefig(out, dpi=180, bbox_inches="tight")
-    plt.close()
+    fig, ax = _canvas((18, 5))
 
+    ax.text(
+        0.5, 0.88,
+        "Pharmaceutical Vendor Documentation Workflow",
+        ha="center", va="center",
+        transform=ax.transAxes,
+        fontsize=28, fontweight="bold", color=NAVY
+    )
+
+    steps = [
+        "Vendor",
+        "Document\nSubmission",
+        "QA/QC\nReview",
+        "Compliance\nValidation",
+        "Approval\n& Release"
+    ]
+
+    n = len(steps)
+    y = 0.42
+    w = 0.13
+    h = 0.24
+
+    # Auto-fit layout so everything stays on the canvas
+    left_margin = 0.06
+    right_margin = 0.06
+    available = 1.0 - left_margin - right_margin - (n * w)
+
+    # If space is tight, shrink width slightly
+    if available < 0.12:
+        w = 0.115
+        available = 1.0 - left_margin - right_margin - (n * w)
+
+    # base gap between boxes (visible)
+    gap = max(0.055, available / (n - 1))
+    xs = [left_margin + i * (w + gap) for i in range(n)]
+
+    # Draw boxes
+    for x, label in zip(xs, steps):
+        ax.add_patch(FancyBboxPatch(
+            (x, y), w, h,
+            boxstyle="round,pad=0.02,rounding_size=0.04",
+            linewidth=3, edgecolor=NAVY, facecolor=BOX,
+            transform=ax.transAxes
+        ))
+
+        ax.text(
+            x + w / 2, y + h / 2, label,
+            ha="center", va="center",
+            transform=ax.transAxes,
+            fontsize=18, fontweight="bold", color=NAVY
+        )
+
+    # Draw arrows: compute the REAL gap between boxes and clamp margins
+    for i in range(n - 1):
+        gap_space = xs[i + 1] - (xs[i] + w)  # empty space between the boxes
+
+        # margin must be less than half the gap, otherwise arrows reverse or overlap
+        margin = min(gap_space * 0.22, (gap_space - 0.02) / 2)
+        margin = max(margin, 0.01)  # small buffer so arrow never touches boxes
+
+        start_x = xs[i] + w + margin
+        end_x = xs[i + 1] - margin
+
+        ax.add_patch(FancyArrowPatch(
+            (start_x, y + h / 2),
+            (end_x, y + h / 2),
+            arrowstyle="-|>",
+            mutation_scale=34,
+            linewidth=3,
+            color=NAVY,
+            transform=ax.transAxes
+        ))
+
+    _save(fig, out)
+
+
+# --------------------------------------------------------------------
+# 2) Document Handling Flow (VERTICAL)
+#    - title outside the boxes
+#    - arrows fully between boxes
+# --------------------------------------------------------------------
+def document_flowchart(visuals: Path) -> None:
+    out = visuals / "document_flowchart.png"
+    fig, ax = _canvas((14, 13))
+
+    ax.text(
+        0.5, 0.94,
+        "Document Handling Flow",
+        ha="center", va="center",
+        transform=ax.transAxes,
+        fontsize=28, fontweight="bold", color=NAVY
+    )
+
+    steps = [
+        "Receive vendor document (PDF / scan / email)",
+        "Classify document type (CoA / SDS / Calibration / Change)",
+        "Extract key fields (lot, dates, specs, signatures)",
+        "Validate completeness (required fields, formats)",
+        "Route exceptions (missing / invalid → QA queue)"
+    ]
+
+    x = 0.10
+    w = 0.80
+    h = 0.075
+    gap = 0.12
+    y_start = 0.82
+
+    ys = []
+    for i, label in enumerate(steps):
+        y = y_start - i * (h + gap)
+        ys.append(y)
+
+        ax.add_patch(FancyBboxPatch(
+            (x, y), w, h,
+            boxstyle="round,pad=0.02,rounding_size=0.04",
+            linewidth=3, edgecolor=NAVY, facecolor=BOX,
+            transform=ax.transAxes
+        ))
+
+        ax.text(
+            x + w / 2, y + h / 2, label,
+            ha="center", va="center",
+            transform=ax.transAxes,
+            fontsize=16, fontweight="bold", color=NAVY
+        )
+
+    for i in range(len(ys) - 1):
+        y_top_box_bottom = ys[i]
+        y_next_box_top = ys[i + 1] + h
+
+        margin = gap * 0.30
+        start_y = y_top_box_bottom - margin
+        end_y = y_next_box_top + margin
+
+        ax.add_patch(FancyArrowPatch(
+            (0.5, start_y),
+            (0.5, end_y),
+            arrowstyle="-|>",
+            mutation_scale=40,
+            linewidth=3,
+            color=NAVY,
+            transform=ax.transAxes
+        ))
+
+    _save(fig, out)
+
+
+# --------------------------------------------------------------------
+# 3) Compliance Risk Heatmap (simple + readable)
+# --------------------------------------------------------------------
 def compliance_risk_map(visuals: Path) -> None:
     out = visuals / "compliance_risk_map.png"
+
     risk = np.array([
         [1, 2, 3, 4],
         [2, 3, 4, 5],
         [1, 3, 4, 5],
         [1, 2, 3, 4],
     ])
-    fig, ax = plt.subplots(figsize=(6, 5))
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    fig.patch.set_facecolor(BG)
+    ax.set_facecolor(BG)
+
     im = ax.imshow(risk, cmap="Reds")
-    ax.set_title("Compliance Risk Heatmap", fontsize=13, fontweight="bold")
-    ax.set_xticks([0,1,2,3]); ax.set_yticks([0,1,2,3])
-    ax.set_xticklabels(["Low Impact", "Med", "High", "Critical"], rotation=15)
-    ax.set_yticklabels(["Low Likelihood", "Med", "High", "Critical"])
-    plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    plt.tight_layout()
-    plt.savefig(out, dpi=180, bbox_inches="tight")
-    plt.close()
 
-def document_flowchart(visuals: Path) -> None:
-    out = visuals / "document_flowchart.png"
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.axis("off")
-    boxes = [
-        ("Receive vendor document\n(PDF / scan / email)", (1, 4.5)),
-        ("Classify document type\n(CoA / SDS / Calibration / Change)", (1, 3.4)),
-        ("Extract key fields\n(lot, dates, specs, signatures)", (1, 2.3)),
-        ("Validate completeness\n(required fields, formats)", (1, 1.2)),
-        ("Route exceptions\n(missing/invalid → QA queue)", (1, 0.1)),
-    ]
-    for label, (x,y) in boxes:
-        ax.add_patch(FancyBboxPatch((x,y), 8, 0.85, boxstyle="round,pad=0.2,rounding_size=0.12",
-                                   linewidth=1.2, edgecolor="black", facecolor="#fff7e6"))
-        ax.text(x+4, y+0.43, label, ha="center", va="center", fontsize=11, fontweight="bold")
-    for i in range(len(boxes)-1):
-        ax.add_patch(FancyArrowPatch((5, boxes[i][1][1]-0.05), (5, boxes[i+1][1][1]+0.95),
-                                     arrowstyle="-|>", mutation_scale=18, linewidth=1.2))
-    ax.text(5, 5.55, "Document Handling Flow (AI-Ready)", ha="center", fontsize=14, fontweight="bold")
-    plt.savefig(out, dpi=180, bbox_inches="tight")
-    plt.close()
+    ax.set_title("Compliance Risk Heatmap", fontsize=22, fontweight="bold", color=NAVY, pad=16)
 
+    ax.set_xticks([0, 1, 2, 3])
+    ax.set_yticks([0, 1, 2, 3])
+    ax.set_xticklabels(["Low Impact", "Med", "High", "Critical"], fontsize=13)
+    ax.set_yticklabels(["Low Likelihood", "Med", "High", "Critical"], fontsize=13)
+
+    for i in range(risk.shape[0]):
+        for j in range(risk.shape[1]):
+            ax.text(
+                j, i, str(risk[i, j]),
+                ha="center", va="center",
+                fontsize=13, fontweight="bold", color=NAVY
+            )
+
+    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    fig.savefig(out, dpi=320, bbox_inches="tight", facecolor=BG)
+    plt.close(fig)
+
+
+# --------------------------------------------------------------------
+# MAIN
+# --------------------------------------------------------------------
 def main():
     project_root = Path(__file__).resolve().parents[1]
-    visuals = ensure_dirs(project_root)
+    visuals = project_root / "visuals"
+    visuals.mkdir(exist_ok=True)
+
+    print("Writing visuals to:", visuals.resolve())
+
     pharma_workflow(visuals)
-    compliance_risk_map(visuals)
     document_flowchart(visuals)
-    print("✅ Visuals regenerated in:", visuals)
+    compliance_risk_map(visuals)
+
+    print("✅ Visuals updated:", visuals.resolve())
+
 
 if __name__ == "__main__":
     main()
