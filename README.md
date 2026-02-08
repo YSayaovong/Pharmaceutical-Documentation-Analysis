@@ -1,10 +1,5 @@
 # Pharmaceutical Documentation Analysis & AI Readiness
 
-## GitHub short description
-Pharmaceutical vendor-document workflow + compliance risk analysis + AI automation opportunities (OCR/NLP/RAG), with vendor documents and generated visuals.
-
-![Workflow](visuals/pharma_workflow.png)
-
 ## What this is
 This project converts a pharma documentation learning module into a public, employer-ready artifact. It explains how vendor documentation is handled, why compliance matters, and where AI reduces errors and review time.
 
