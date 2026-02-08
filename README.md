@@ -1,4 +1,4 @@
-# Pharmaceutical Documentation Analysis & AI Readiness
+# Pharmaceutical Documentation Analysis
 
 ## What this is
 This project converts a pharma documentation learning module into a public, employer-ready artifact. It explains how vendor documentation is handled, why compliance matters, and where AI reduces errors and review time.
