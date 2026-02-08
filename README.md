@@ -103,6 +103,12 @@ python scripts/generate_visuals.py
 
 ---
 
+## Video
+
+Coming Soon  
+
+---
+
 ## 👤 Author
 
 **Yengkong Sayaovong (2026)**
